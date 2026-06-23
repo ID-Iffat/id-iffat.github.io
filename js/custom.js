@@ -25,19 +25,20 @@ jQuery(document).ready(function($){
                     var thumbnailImg = (item.images && item.images.length > 0) ? item.images[0] : '';
                     // Convert all project images to a clean string string sequence for data pass
                     var imagesString = (item.images) ? item.images.join(',') : '';
-
                     itemsHtml += `
                     <div class="iso-box ${item.category}">
                         <div class="portfolio-thumb" 
-                             data-title="${item.title}" 
-                             data-desc="${item.description}" 
-                             data-images="${imagesString}" 
-                             data-cat="${item.category}">
+                            data-title="${item.title}" 
+                            data-desc="${item.description}" 
+                            data-images="${imagesString}" 
+                            data-url="${item.projectUrl || ''}" 
+                            data-cat="${item.category}">
                             <img src="${thumbnailImg}" class="fluid-img" alt="${item.title}">
+                            
                             <div class="portfolio-overlay">
                                 <h3 class="portfolio-item-title">${item.title}</h3>
-                                <p>${item.description}</p>
                             </div>
+                            
                         </div>
                     </div>`;
                 });
@@ -105,7 +106,7 @@ jQuery(document).ready(function($){
 
             // Set up inner window container content dynamically
             $('#lightbox-title').text(title);
-            $('#lightbox-desc').text(desc);
+            $('#lightbox-desc').html(desc);
             $('#lightbox-category').text(cat);
             
             updateLightboxImage();
