@@ -105,7 +105,7 @@ jQuery(document).ready(function($){
 
             // Set up inner window container content dynamically
             $('#lightbox-title').text(title);
-            $('#lightbox-desc').text(desc);
+            $('#lightbox-desc').html(desc);
             $('#lightbox-category').text(cat);
             
             updateLightboxImage();
