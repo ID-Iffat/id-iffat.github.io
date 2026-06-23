@@ -4,6 +4,10 @@ jQuery(document).ready(function($){
     var $container = $('#dynamic-portfolio-container');
     var workerUrl = 'https://port.iffatadibamusaffa.workers.dev/api/portfolio';
 
+    // Global state arrays for Lightbox presentation tracking
+    var lightboxImages = [];
+    var currentLightboxIndex = 0;
+
     if ( $container.length > 0 ) { 
 
         // 1. Fetch dynamic config data via Cloudflare Worker Proxy
@@ -15,16 +19,21 @@ jQuery(document).ready(function($){
             .then(data => {
                 let itemsHtml = '';
                 
-                // 2. Map JSON data fields into HTML structure with data attributes for click access
+                // 2. Map JSON arrays into the layout structure
                 data.forEach(item => {
+                    // Pull the first image as the primary cover card thumbnail
+                    var thumbnailImg = (item.images && item.images.length > 0) ? item.images[0] : '';
+                    // Convert all project images to a clean string string sequence for data pass
+                    var imagesString = (item.images) ? item.images.join(',') : '';
+
                     itemsHtml += `
                     <div class="iso-box ${item.category}">
                         <div class="portfolio-thumb" 
                              data-title="${item.title}" 
                              data-desc="${item.description}" 
-                             data-img="${item.imageUrl}" 
+                             data-images="${imagesString}" 
                              data-cat="${item.category}">
-                            <img src="${item.imageUrl}" class="fluid-img" alt="${item.title}">
+                            <img src="${thumbnailImg}" class="fluid-img" alt="${item.title}">
                             <div class="portfolio-overlay">
                                 <h3 class="portfolio-item-title">${item.title}</h3>
                                 <p>${item.description}</p>
@@ -54,8 +63,8 @@ jQuery(document).ready(function($){
                                 duration: 750, 
                                 easing: 'linear', 
                                 queue: false, 
-                            }              	 
-                        });	            
+                            }                
+                        });             
 
                         if ( $this.hasClass('selected') ) { return false; }
 
@@ -76,27 +85,64 @@ jQuery(document).ready(function($){
         // LIGHTBOX INTERACTION CONTROLLER LOGIC
         // ==========================================
 
+        // Image updater rendering function
+        function updateLightboxImage() {
+            if (lightboxImages.length > 0) {
+                $('#lightbox-img').attr('src', lightboxImages[currentLightboxIndex]);
+            }
+        }
+
         // Capture item card clicks to populate and activate the presentation overlay
         $(document).on('click', '.portfolio-thumb', function() {
             var title = $(this).attr('data-title');
             var desc = $(this).attr('data-desc');
-            var img = $(this).attr('data-img');
             var cat = $(this).attr('data-cat');
+            
+            // Extract the multi-image strings array back out cleanly
+            var rawImages = $(this).attr('data-images');
+            lightboxImages = rawImages ? rawImages.split(',') : [];
+            currentLightboxIndex = 0; // Always point to item 0 on opening modal
 
             // Set up inner window container content dynamically
             $('#lightbox-title').text(title);
             $('#lightbox-desc').text(desc);
-            $('#lightbox-img').attr('src', img);
             $('#lightbox-category').text(cat);
+            
+            updateLightboxImage();
+
+            // Auto hide/show navigational items if project has single vs multiple slides
+            if (lightboxImages.length > 1) {
+                $('.lightbox-nav-btn').show();
+            } else {
+                $('.lightbox-nav-btn').hide();
+            }
 
             // Pop overlay visibility open
             $('#portfolio-lightbox').addClass('active');
             $('body').css('overflow', 'hidden'); // Freeze body scrolling in background
         });
 
+        // Sliding Forward Control Action
+        $(document).on('click', '.lightbox-next', function(e) {
+            e.stopPropagation(); // Avoid triggering lightbox close handlers
+            if (lightboxImages.length > 1) {
+                currentLightboxIndex = (currentLightboxIndex + 1) % lightboxImages.length;
+                updateLightboxImage();
+            }
+        });
+
+        // Sliding Backward Control Action
+        $(document).on('click', '.lightbox-prev', function(e) {
+            e.stopPropagation(); // Avoid triggering lightbox close handlers
+            if (lightboxImages.length > 1) {
+                currentLightboxIndex = (currentLightboxIndex - 1 + lightboxImages.length) % lightboxImages.length;
+                updateLightboxImage();
+            }
+        });
+
         // Close display window when clicking close action or container backdrop bounds
         $(document).on('click', '.lightbox-close, #portfolio-lightbox', function(e) {
-            if (e.target === this || $(e.target).hasClass('lightbox-close')) {
+            if (e.target === this || $(e.target).hasClass('lightbox-close') || $(e.target).closest('.lightbox-close').length) {
                 $('#portfolio-lightbox').removeClass('active');
                 $('body').css('overflow', 'auto'); // Restore layout scrolling
             }

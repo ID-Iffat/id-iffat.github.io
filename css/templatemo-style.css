@@ -715,3 +715,51 @@ input { height: 50px; }
     text-align: left;
     margin-bottom: 15px;
 }
+
+.lightbox-left {
+    position: relative;
+    display: inline-block;
+}
+
+/* Base structural properties for custom slider toggle buttons */
+.lightbox-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5); /* Semi-transparent background for readability */
+    border: none;
+    color: #ffffff !important;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    font-size: 22px;
+    line-height: 42px;
+    text-align: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.25s ease-in-out;
+    display: none; /* Controlled dynamically via your custom.js logic */
+    padding: 0;
+}
+
+/* Hover highlights matching your accent styling signature */
+.lightbox-nav-btn:hover {
+    background: #ff3366; 
+    transform: translateY(-50%) scale(1.1);
+    outline: none;
+}
+
+/* Pin panels firmly against the opposing edge boundaries */
+.lightbox-prev {
+    left: 15px;
+}
+
+.lightbox-next {
+    right: 15px;
+}
+
+/* Center FontAwesome glyph alignments cleanly */
+.lightbox-nav-btn .fa {
+    display: block;
+    line-height: 42px;
+}
