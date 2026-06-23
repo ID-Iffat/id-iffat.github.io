@@ -195,7 +195,6 @@ jQuery('#portfolio-contact-form').on('submit', function(e) {
     var $form = jQuery(this);
     var $submitBtn = jQuery('#contact-submit-btn');
     
-    // Disable button to prevent double-submitting while uploading
     $submitBtn.val('SENDING...').prop('disabled', true);
 
     // Collect all data fields from the input attributes
@@ -205,30 +204,33 @@ jQuery('#portfolio-contact-form').on('submit', function(e) {
         subject: $form.find('input[name="userSubject"]').val(),
         message: $form.find('textarea[name="userMessage"]').val(),
         honey: $form.find('input[name="security_honey"]').val(),
-        // Capture the token generated automatically by Turnstile's widget iframe
-        turnstileToken: $form.find('[name="cf-turnstile-response"]').val()
+        // Foolproof way to grab the active token straight from the Turnstile API instance
+        turnstileToken: (typeof turnstile !== 'undefined') ? turnstile.getResponse() : ''
     };
 
-    // Dispatch payload to your worker API pipeline
     fetch('https://port.iffatadibamusaffa.workers.dev/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
     })
     .then(function(response) {
-        if (!response.ok) throw new Error('Submission flagged or server error.');
+        // If the server returns 403/500, forward to the catch block to parse the response
+        if (!response.ok) {
+            return response.json().then(errData => {
+                throw new Error(errData.debug_info ? errData.debug_info.join(', ') : 'Submission flagged.');
+            });
+        }
         return response.json();
     })
     .then(function(data) {
         alert('Thank you! Your message has been sent successfully.');
-        $form(0).reset(); // Clear form fields
-        if (typeof turnstile !== 'undefined') turnstile.reset(); // Clear captcha token
+        $form.trigger('reset'); 
+        if (typeof turnstile !== 'undefined') turnstile.reset(); 
     })
     .catch(function(err) {
-        alert('Could not verify submission. Please try again or refresh.');
+        alert('Verification Failed. Reason: ' + err.message);
     })
     .finally(function() {
-        // Re-enable button
         $submitBtn.val('SHOOT MESSAGE').prop('disabled', false);
     });
 });
