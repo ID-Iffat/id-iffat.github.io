@@ -232,45 +232,56 @@ jQuery(document).ready(function($){
                 if (secretData.portfolioItems) {
                     combinedItems = [...secretData.portfolioItems];
                 }
-                const malAnimeUrl = "https://api.jikan.moe/v4/users/FFeT/animelist";
-                const malMangaUrl = "https://api.jikan.moe/v4/users/FFeT/mangalists";
+
+                const username = "FFeT";
+                const corsProxy = "https://corsproxy.io/?";
+
+                const malAnimeUrl = `${corsProxy}https://myanimelist.net/animelist/${username}/load.json?status=7&offset=0`;
+                const malMangaUrl = `${corsProxy}https://myanimelist.net/mangalist/${username}/load.json?status=7&offset=0`;
+
+                const malStatusMap = {
+                    1: "Watching / Reading",
+                    2: "Completed",
+                    3: "On Hold",
+                    4: "Dropped",
+                    6: "Plan to Watch / Read"
+                };
 
                 Promise.all([
-                    fetch(malAnimeUrl).then(r => r.ok ? r.json() : { data: [] }),
-                    fetch(malMangaUrl).then(r => r.ok ? r.json() : { data: [] })
+                    fetch(malAnimeUrl).then(r => r.ok ? r.json() : []),
+                    fetch(malMangaUrl).then(r => r.ok ? r.json() : [])
                 ])
-
                 .then(([animeData, mangaData]) => {
                     
-                    // Parse through your Live Anime Entry Feed
-                    if (animeData.data) {
-                        animeData.data.forEach(entry => {
+                    // Parse through your native Anime list array
+                    if (Array.isArray(animeData)) {
+                        animeData.forEach(entry => {
                             combinedItems.push({
-                                id: "mal-anime-" + entry.anime.mal_id,
-                                title: entry.anime.title,
+                                id: "mal-anime-" + entry.anime_id,
+                                title: entry.anime_title,
                                 category: "software", // Matches your '.software' filter button (Anime)
-                                description: "Status: " + entry.status.replace(/_/g, ' ') + " | My Score: " + (entry.score || "Unrated"),
-                                images: [entry.anime.images.jpg.image_url],
-                                projectUrl: entry.anime.url
+                                description: `Status: ${malStatusMap[entry.status] || 'Unknown'} | My Score: ${entry.score || "Unrated"}`,
+                                images: [entry.anime_image_path], // Native direct CDN cover link
+                                projectUrl: "https://myanimelist.net" + entry.anime_url
                             });
                         });
                     }
 
-                    // Parse through your Live Manga Entry Feed
-                    if (mangaData.data) {
-                        mangaData.data.forEach(entry => {
+                    // Parse through your native Manga list array
+                    if (Array.isArray(mangaData)) {
+                        mangaData.forEach(entry => {
                             combinedItems.push({
-                                id: "mal-manga-" + entry.manga.mal_id,
-                                title: entry.manga.title,
+                                id: "mal-manga-" + entry.manga_id,
+                                title: entry.manga_title,
                                 category: "web", // Matches your '.web' filter button (Manga)
-                                description: "Status: " + entry.status.replace(/_/g, ' ') + " | My Score: " + (entry.score || "Unrated"),
-                                images: [entry.manga.images.jpg.image_url],
-                                projectUrl: entry.manga.url
+                                description: `Status: ${malStatusMap[entry.status] || 'Unknown'} | My Score: ${entry.score || "Unrated"}`,
+                                images: [entry.manga_image_path], // Native direct CDN cover link
+                                projectUrl: "https://myanimelist.net" + entry.manga_url
                             });
                         });
                     }
 
-                    // Build the template structures for all components combined
+                    // 4. BUILD THE GRID HTML AND TRIGGER ISOTOPE ANIMATION
                     let itemsHtml = '';
                     combinedItems.forEach(item => {
                         var thumbnailImg = (item.images && item.images.length > 0) ? item.images[0] : '';
@@ -292,7 +303,7 @@ jQuery(document).ready(function($){
                         </div>`;
                     });
 
-                    // Populate and kickstart the grid animations
+                    // Apply the items markup block to your section container
                     var $container = $('#dynamic-portfolio-container');
                     $container.html(itemsHtml);
                     $container.imagesLoaded(function () {
