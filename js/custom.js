@@ -225,19 +225,54 @@ jQuery(document).ready(function($){
                     });
                 }
                 if (secretData.images) {
-                    // Overwrite the background-image CSS property of your home container
-                    if (secretData.images.homeBackground) {
-                        $('#home').css('background-image', "url('" + secretData.images.homeBackground + "')");
-                    }
-                    
-                    // Target the portrait component inside your about column and update its attribute string
-                    if (secretData.images.aboutProfile) {
-                        $('.tm-about-profile').attr('src', secretData.images.aboutProfile);
-                    }
+                    if (secretData.images.homeBackground) $('#home').css('background-image', "url('" + secretData.images.homeBackground + "')");
+                    if (secretData.images.aboutProfile) $('.tm-about-profile').attr('src', secretData.images.aboutProfile);
                 }
+                let combinedItems = [];
                 if (secretData.portfolioItems) {
+                    combinedItems = [...secretData.portfolioItems];
+                }
+                const malAnimeUrl = "https://api.jikan.moe/v4/users/FFeT/animelist";
+                const malMangaUrl = "https://api.jikan.moe/v4/users/FFeT/mangalists";
+
+                Promise.all([
+                    fetch(malAnimeUrl).then(r => r.ok ? r.json() : { data: [] }),
+                    fetch(malMangaUrl).then(r => r.ok ? r.json() : { data: [] })
+                ])
+
+                .then(([animeData, mangaData]) => {
+                    
+                    // Parse through your Live Anime Entry Feed
+                    if (animeData.data) {
+                        animeData.data.forEach(entry => {
+                            combinedItems.push({
+                                id: "mal-anime-" + entry.anime.mal_id,
+                                title: entry.anime.title,
+                                category: "software", // Matches your '.software' filter button (Anime)
+                                description: "Status: " + entry.status.replace(/_/g, ' ') + " | My Score: " + (entry.score || "Unrated"),
+                                images: [entry.anime.images.jpg.image_url],
+                                projectUrl: entry.anime.url
+                            });
+                        });
+                    }
+
+                    // Parse through your Live Manga Entry Feed
+                    if (mangaData.data) {
+                        mangaData.data.forEach(entry => {
+                            combinedItems.push({
+                                id: "mal-manga-" + entry.manga.mal_id,
+                                title: entry.manga.title,
+                                category: "web", // Matches your '.web' filter button (Manga)
+                                description: "Status: " + entry.status.replace(/_/g, ' ') + " | My Score: " + (entry.score || "Unrated"),
+                                images: [entry.manga.images.jpg.image_url],
+                                projectUrl: entry.manga.url
+                            });
+                        });
+                    }
+
+                    // Build the template structures for all components combined
                     let itemsHtml = '';
-                    secretData.portfolioItems.forEach(item => {
+                    combinedItems.forEach(item => {
                         var thumbnailImg = (item.images && item.images.length > 0) ? item.images[0] : '';
                         var imagesString = (item.images) ? item.images.join(',') : '';
 
@@ -249,19 +284,21 @@ jQuery(document).ready(function($){
                                 data-images="${imagesString}"
                                 data-url="${item.projectUrl || ''}"
                                 data-cat="${item.category}">
-                                <img src="${thumbnailImg}" class="fluid-img" alt="${item.title}">
+                                <img src="${thumbnailImg}" class="fluid-img" alt="${item.title}" style="height: 300px; object-fit: cover; width: 100%;">
                                 <div class="portfolio-overlay">
                                     <h3 class="portfolio-item-title">${item.title}</h3>
                                 </div>
                             </div>
                         </div>`;
                     });
+
+                    // Populate and kickstart the grid animations
                     var $container = $('#dynamic-portfolio-container');
                     $container.html(itemsHtml);
                     $container.imagesLoaded(function () {
                         $container.isotope('reloadItems').isotope({ layoutMode: 'fitRows' });
                     });
-                }
+                })
             })
             .catch(err => {
                 console.log("Nothing to see here.");
