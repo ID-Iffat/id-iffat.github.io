@@ -348,14 +348,18 @@ hr {
 }
 .facebook:hover,
 .twitter:hover,
-.pinterest:hover,
-.linkedin:hover {
+.linkedin:hover,
+.discord:hover,
+.steam:hover,
+.myanimelist:hover {
   background: #202020;
 }
 .facebook { background: #3b5998; }
 .twitter { background: #55acee; }
-.pinterest { background: #cc2127; }
 .linkedin { background: #0077b5; }
+.discord { background: #7289da; }
+.steam { background: #171a21; }
+.myanimelist { background: #2e51a2; }
 .media {
   padding: 80px 40px 80px 40px;
   -webkit-transition: all 0.6s ease-in;

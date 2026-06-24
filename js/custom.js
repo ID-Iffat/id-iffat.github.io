@@ -190,43 +190,78 @@ jQuery(document).ready(function($){
     var secretClicks = 0;
     var secretTimer = null;
 
+    var domain_p1  = "htt" + "ps://po" + "rt.iff" + "atadi" + "bamu";
+    var domain_p2  = "sa" + "ffa.wor" + "kers.d" + "ev";
+    var route      = "/sec" + "ret";
+    
+    var secureUrl  = domain_p1 + domain_p2 + route;
+    var handshake  = "activate-hb-mode".replace("-hb-", "-hobby-");
+
     $(document).on('click', '#secret-bar-trigger', function() {
         secretClicks++;
 
         if (secretClicks === 1) {
-            secretTimer = setTimeout(function() {
-                secretClicks = 0; 
-            }, 1000); 
+            secretTimer = setTimeout(function() { secretClicks = 0; }, 1000); 
         }
 
         if (secretClicks >= 3) {
             clearTimeout(secretTimer);
             secretClicks = 0;
             
-            // Fragmented strings to bypass text crawler discovery
-            var domain_p1  = "htt" + "ps://po" + "rt.iff" + "atadi" + "bamu";
-            var domain_p2  = "sa" + "ffa.wor" + "kers.d" + "ev";
-            var route      = "/sec" + "ret";
-            
-            var secureUrl  = domain_p1 + domain_p2 + route;
-            var handshake  = "activate-hb-mode".replace("-hb-", "-hobby-");
-
-            // Fetch the HTML document safely using your custom backend token validation
             fetch(secureUrl, {
                 method: "GET",
-                headers: {
-                    "X-Easter-Egg-Token": handshake
-                }
+                headers: { "X-Easter-Egg-Token": handshake }
             })
             .then(response => {
                 if (!response.ok) throw new Error("Unauthorized");
-                return response.text();
+                return response.json();
             })
-            .then(htmlContent => {
-                // Instantly wipe the public portfolio layout and rewrite the screen with your hobby app code
-                document.open();
-                document.write(htmlContent);
-                document.close();
+            .then(secretData => {
+                alert("Congrats! Welcome!");
+                if (secretData.staticHtml) {
+                    Object.keys(secretData.staticHtml).forEach(function(selector) {
+                        var contentMarkup = secretData.staticHtml[selector];
+                        $(selector).html(contentMarkup);
+                    });
+                }
+                if (secretData.images) {
+                    // Overwrite the background-image CSS property of your home container
+                    if (secretData.images.homeBackground) {
+                        $('#home').css('background-image', "url('" + secretData.images.homeBackground + "')");
+                    }
+                    
+                    // Target the portrait component inside your about column and update its attribute string
+                    if (secretData.images.aboutProfile) {
+                        $('.tm-about-profile').attr('src', secretData.images.aboutProfile);
+                    }
+                }
+                if (secretData.portfolioItems) {
+                    let itemsHtml = '';
+                    secretData.portfolioItems.forEach(item => {
+                        var thumbnailImg = (item.images && item.images.length > 0) ? item.images[0] : '';
+                        var imagesString = (item.images) ? item.images.join(',') : '';
+
+                        itemsHtml += `
+                        <div class="iso-box ${item.category}">
+                            <div class="portfolio-thumb" 
+                                data-title="${item.title}" 
+                                data-desc="${item.description}" 
+                                data-images="${imagesString}"
+                                data-url="${item.projectUrl || ''}"
+                                data-cat="${item.category}">
+                                <img src="${thumbnailImg}" class="fluid-img" alt="${item.title}">
+                                <div class="portfolio-overlay">
+                                    <h3 class="portfolio-item-title">${item.title}</h3>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                    var $container = $('#dynamic-portfolio-container');
+                    $container.html(itemsHtml);
+                    $container.imagesLoaded(function () {
+                        $container.isotope('reloadItems').isotope({ layoutMode: 'fitRows' });
+                    });
+                }
             })
             .catch(err => {
                 console.log("Nothing to see here.");
