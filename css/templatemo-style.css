@@ -848,3 +848,64 @@ input { height: 50px; }
     box-shadow: none;
     opacity: 0.7;
 }
+
+/* Container padding to make sure the items don't collide with the side buttons */
+.portfolio-ui-wrapper {
+    position: relative;
+    padding: 0 45px; /* Creates whitespace on left/right for the arrows */
+}
+
+/* Base styling for both side buttons */
+.portfolio-side-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%); /* Keeps them perfectly centered vertically */
+    background: rgba(0, 0, 0, 0.05); /* Soft, clean background default */
+    color: #333; /* Arrow icon color */
+    border: none;
+    width: 40px;
+    height: 70px;
+    font-size: 32px; /* Makes the fa-angle icon crisp and legible */
+    cursor: pointer;
+    z-index: 100; /* Keeps them layered above your portfolio item overlays */
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+/* Button position coordinates */
+.prev-side {
+    left: 0;
+}
+.next-side {
+    right: 0;
+}
+
+/* Hover Accent animations (Using your portfolio's signature pink/red accent tint) */
+.portfolio-side-btn:hover:not(:disabled) {
+    background: #ff3366; 
+    color: #ffffff;
+}
+
+/* Smooth opacity handling when a button hits a pagination wall */
+.portfolio-side-btn:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+    background: transparent;
+}
+
+/* Mobile responsive optimization so they don't block cards on small views */
+@media (max-width: 768px) {
+    .portfolio-ui-wrapper {
+        padding: 0 15px;
+    }
+    .portfolio-side-btn {
+        width: 30px;
+        height: 50px;
+        font-size: 24px;
+        background: rgba(0, 0, 0, 0.4); /* Darker background so they stand out when overlapping images */
+        color: #fff;
+    }
+}
