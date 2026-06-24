@@ -187,9 +187,15 @@ jQuery(document).ready(function($){
 
 // OBFUSCATED TRIPLE-CLICK SECURE GATEWAY
 (function($) {
+    // 1. GLOBAL STATE TRACKING (Shared across easter egg and navigation controls)
     var secretClicks = 0;
     var secretTimer = null;
+    var combinedItems = [];
+    var currentPage = 0;
+    var currentFilter = '*';
+    var itemsPerPage = 10; // Strict limit: 2 rows × 5 columns
 
+    // 2. OBFUSCATED API ROUTING PATHWAYS
     var domain_p1  = "htt" + "ps://po" + "rt.iff" + "atadi" + "bamu";
     var domain_p2  = "sa" + "ffa.wor" + "kers.d" + "ev";
     var route      = "/sec" + "ret";
@@ -197,6 +203,7 @@ jQuery(document).ready(function($){
     var secureUrl  = domain_p1 + domain_p2 + route;
     var handshake  = "activate-hb-mode".replace("-hb-", "-hobby-");
 
+    // 3. SECRET EASTER EGG CLICK TRIGGER
     $(document).on('click', '#secret-bar-trigger', function() {
         secretClicks++;
 
@@ -218,33 +225,36 @@ jQuery(document).ready(function($){
             })
             .then(secretData => {
                 alert("Congrats! Welcome!");
+                
+                // Process static text adjustments
                 if (secretData.staticHtml) {
                     Object.keys(secretData.staticHtml).forEach(function(selector) {
                         var contentMarkup = secretData.staticHtml[selector];
                         $(selector).html(contentMarkup);
                     });
                 }
+
+                // Swaps branding imagery
                 if (secretData.images) {
                     if (secretData.images.homeBackground) $('#home').css('background-image', "url('" + secretData.images.homeBackground + "')");
                     if (secretData.images.aboutProfile) $('.tm-about-profile').attr('src', secretData.images.aboutProfile);
                 }
-                let combinedItems = [];
-                if (secretData.portfolioItems) {
-                    combinedItems = [...secretData.portfolioItems];
-                }
 
-                const username = "FFeT";
-                const corsProxy = "https://corsproxy.io/?";
+                // Seed data array with hardcoded portfolio updates (like Games)
+                combinedItems = secretData.portfolioItems ? [...secretData.portfolioItems] : [];
 
-                const malAnimeUrl = `${corsProxy}https://myanimelist.net/animelist/${username}/load.json?status=7&offset=0`;
-                const malMangaUrl = `${corsProxy}https://myanimelist.net/mangalist/${username}/load.json?status=7&offset=0`;
+                // Execute Live API Fetch from MyAnimeList accounts
+                var username = "FFeT";
+                var corsProxy = "https://corsproxy.io/?";
+                var malAnimeUrl = `${corsProxy}https://myanimelist.net/animelist/${username}/load.json?status=7&offset=0`;
+                var malMangaUrl = `${corsProxy}https://myanimelist.net/mangalist/${username}/load.json?status=7&offset=0`;
 
-                const malStatusMap = {
+                var malStatusMap = {
                     1: "Watching / Reading",
                     2: "Completed",
                     3: "On Hold",
                     4: "Dropped",
-                    6: "Plan to Watch / Read"
+                    6: "Plan to Watch"
                 };
 
                 Promise.all([
@@ -253,69 +263,124 @@ jQuery(document).ready(function($){
                 ])
                 .then(([animeData, mangaData]) => {
                     
-                    // Parse through your native Anime list array
+                    // Parse live Anime feed records
                     if (Array.isArray(animeData)) {
-                        animeData.forEach(entry => {
+                        animeData.forEach(function(entry) {
                             combinedItems.push({
                                 id: "mal-anime-" + entry.anime_id,
                                 title: entry.anime_title,
-                                category: "software", // Matches your '.software' filter button (Anime)
+                                category: "software", // Filters under your Anime button
                                 description: `Status: ${malStatusMap[entry.status] || 'Unknown'} | My Score: ${entry.score || "Unrated"}`,
-                                images: [entry.anime_image_path], // Native direct CDN cover link
+                                images: [entry.anime_image_path],
                                 projectUrl: "https://myanimelist.net" + entry.anime_url
                             });
                         });
                     }
 
-                    // Parse through your native Manga list array
+                    // Parse live Manga feed records
                     if (Array.isArray(mangaData)) {
-                        mangaData.forEach(entry => {
+                        mangaData.forEach(function(entry) {
                             combinedItems.push({
                                 id: "mal-manga-" + entry.manga_id,
                                 title: entry.manga_title,
-                                category: "web", // Matches your '.web' filter button (Manga)
+                                category: "web", // Filters under your Manga button
                                 description: `Status: ${malStatusMap[entry.status] || 'Unknown'} | My Score: ${entry.score || "Unrated"}`,
-                                images: [entry.manga_image_path], // Native direct CDN cover link
+                                images: [entry.manga_image_path],
                                 projectUrl: "https://myanimelist.net" + entry.manga_url
                             });
                         });
                     }
 
-                    // 4. BUILD THE GRID HTML AND TRIGGER ISOTOPE ANIMATION
-                    let itemsHtml = '';
-                    combinedItems.forEach(item => {
-                        var thumbnailImg = (item.images && item.images.length > 0) ? item.images[0] : '';
-                        var imagesString = (item.images) ? item.images.join(',') : '';
-
-                        itemsHtml += `
-                        <div class="iso-box ${item.category}">
-                            <div class="portfolio-thumb" 
-                                data-title="${item.title}" 
-                                data-desc="${item.description}" 
-                                data-images="${imagesString}"
-                                data-url="${item.projectUrl || ''}"
-                                data-cat="${item.category}">
-                                <img src="${thumbnailImg}" class="fluid-img" alt="${item.title}" style="height: 300px; object-fit: cover; width: 100%;">
-                                <div class="portfolio-overlay">
-                                    <h3 class="portfolio-item-title">${item.title}</h3>
-                                </div>
-                            </div>
-                        </div>`;
-                    });
-
-                    // Apply the items markup block to your section container
-                    var $container = $('#dynamic-portfolio-container');
-                    $container.html(itemsHtml);
-                    $container.imagesLoaded(function () {
-                        $container.isotope('reloadItems').isotope({ layoutMode: 'fitRows' });
-                    });
-                })
+                    // Render grid layout engine on launch selection
+                    renderPortfolioGrid();
+                });
             })
             .catch(err => {
                 console.log("Nothing to see here.");
             });
         }
     });
+
+    // 4. REUSABLE PAGINATED RENDERING ENGINE
+    function renderPortfolioGrid() {
+        // Filter elements based on active categories
+        var filtered = combinedItems;
+        if (currentFilter !== '*') {
+            var targetCategory = currentFilter.replace('.', ''); // transforms '.web' filter into matching 'web' string
+            filtered = combinedItems.filter(function(item) {
+                return item.category === targetCategory;
+            });
+        }
+
+        // Slice array index window strictly to current page window (max 10 items)
+        var startIndex = currentPage * itemsPerPage;
+        var endIndex = startIndex + itemsPerPage;
+        var itemsToDisplay = filtered.slice(startIndex, endIndex);
+
+        // Build HTML template output using the .col-five layout framework
+        var itemsHtml = '';
+        itemsToDisplay.forEach(function(item) {
+            var thumbnailImg = (item.images && item.images.length > 0) ? item.images[0] : '';
+            var imagesString = (item.images) ? item.images.join(',') : '';
+
+            itemsHtml += `
+            <div class="iso-box col-five ${item.category}">
+                <div class="portfolio-thumb" 
+                    data-title="${item.title}" 
+                    data-desc="${item.description}" 
+                    data-images="${imagesString}"
+                    data-url="${item.projectUrl || ''}"
+                    data-cat="${item.category}">
+                    <img src="${thumbnailImg}" class="fluid-img" alt="${item.title}" style="height: 240px; object-fit: cover; width: 100%; border-radius: 4px;">
+                    <div class="portfolio-overlay">
+                        <h3 class="portfolio-item-title">${item.title}</h3>
+                    </div>
+                </div>
+            </div>`;
+        });
+
+        // Insert code structures into portfolio and re-compile active layout positioning elements
+        var $container = $('#dynamic-portfolio-container');
+        $container.html(itemsHtml);
+        $container.imagesLoaded(function () {
+            $container.isotope('reloadItems').isotope({ layoutMode: 'fitRows' });
+        });
+
+        // Update pagination navigation states
+        $('#portfolio-prev').prop('disabled', currentPage === 0);
+        $('#portfolio-next').prop('disabled', endIndex >= filtered.length);
+    }
+
+    // 5. GLOBAL INTERACTIVE EVENT HANDLERS
+    // Left Pagination Navigation Trigger
+    $(document).on('click', '#portfolio-prev', function() {
+        if (currentPage > 0) {
+            currentPage--;
+            renderPortfolioGrid();
+        }
+    });
+
+    // Right Pagination Navigation Trigger
+    $(document).on('click', '#portfolio-next', function() {
+        currentPage++;
+        renderPortfolioGrid();
+    });
+
+    // Filter Navigation Button Routing
+    $(document).on('click', 'a[data-filter]', function(e) {
+        // Check if list items have loaded before overwriting navigation properties
+        if (combinedItems.length > 0) {
+            e.preventDefault();
+            currentFilter = $(this).attr('data-filter');
+            currentPage = 0; // Snap users back to page 1 on active tab modifications
+            renderPortfolioGrid();
+            
+            // Re-apply active theme highlighting classes on button selections
+            $('a[data-filter]').parent().removeClass('active');
+            $(this).parent().addClass('active');
+        }
+    });
+
 })(jQuery);
 
 // AJAX CONTACT FORM HANDLER WITH ANTI-SPAM PAYLOAD
