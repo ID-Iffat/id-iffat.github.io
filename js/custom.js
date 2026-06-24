@@ -8,6 +8,76 @@ jQuery(document).ready(function($){
     var lightboxImages = [];
     var currentLightboxIndex = 0;
 
+    // --- PAGINATION & LAYOUT CONFIGURATION ENGINE ---
+    var currentPage = 0;
+    var itemsPerPage = 8; // Strict Limit: 2 rows × 4 columns
+    var currentFilter = '*';
+
+    // --- SECRET EASTER EGG TRACKING ROUTINES ---
+    var secretClicks = 0;
+    var secretTimer = null;
+    var domain_p1  = "htt" + "ps://po" + "rt.iff" + "atadi" + "bamu";
+    var domain_p2  = "sa" + "ffa.wor" + "kers.d" + "ev";
+    var route      = "/sec" + "ret";
+    var secureUrl  = domain_p1 + domain_p2 + route;
+    var handshake  = "activate-hb-mode".replace("-hb-", "-hobby-");
+
+    // Centralized template generator to ensure card structures match identically
+    function createItemCard(item) {
+        var thumbnailImg = (item.images && item.images.length > 0) ? item.images[0] : '';
+        var imagesString = (item.images) ? item.images.join(',') : '';
+        return `
+        <div class="iso-box col-four ${item.category}">
+            <div class="portfolio-thumb" 
+                data-title="${item.title}" 
+                data-desc="${item.description}" 
+                data-images="${imagesString}" 
+                data-url="${item.projectUrl || ''}" 
+                data-cat="${item.category}">
+                <img src="${thumbnailImg}" class="fluid-img" alt="${item.title}">
+                
+                <div class="portfolio-overlay">
+                    <h3 class="portfolio-item-title">${item.title}</h3>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    // Combined Pagination & Category Filtering Coordinator
+    function updateIsotopePagination() {
+        // 1. Find all DOM elements matching the currently selected category filter
+        var $matchingItems = $container.find('.iso-box').filter(currentFilter === '*' ? 'div' : currentFilter);
+        var totalMatching = $matchingItems.length;
+
+        var start = currentPage * itemsPerPage;
+        var end = start + itemsPerPage;
+
+        // 2. Flag items outside the active window page boundary with a layout masking class
+        $matchingItems.each(function(index) {
+            if (index >= start && index < end) {
+                $(this).removeClass('page-hidden');
+            } else {
+                $(this).addClass('page-hidden');
+            }
+        });
+
+        // 3. Command Isotope to transition items matching the combined query filter
+        var compoundFilter = (currentFilter === '*') ? ':not(.page-hidden)' : currentFilter + ':not(.page-hidden)';
+        
+        $container.isotope({ 
+            filter: compoundFilter,
+            animationOptions: { 
+                duration: 750, 
+                easing: 'linear', 
+                queue: false, 
+            }                
+        });
+
+        // 4. Update the interactive navigation controls states perfectly
+        $('#portfolio-prev').prop('disabled', currentPage === 0);
+        $('#portfolio-next').prop('disabled', end >= totalMatching);
+    }
+
     if ( $container.length > 0 ) { 
 
         // 1. Fetch dynamic config data via Cloudflare Worker Proxy
@@ -19,28 +89,9 @@ jQuery(document).ready(function($){
             .then(data => {
                 let itemsHtml = '';
                 
-                // 2. Map JSON arrays into the layout structure
+                // 2. Map JSON arrays into the layout structure using template builder
                 data.forEach(item => {
-                    // Pull the first image as the primary cover card thumbnail
-                    var thumbnailImg = (item.images && item.images.length > 0) ? item.images[0] : '';
-                    // Convert all project images to a clean string string sequence for data pass
-                    var imagesString = (item.images) ? item.images.join(',') : '';
-                    itemsHtml += `
-                    <div class="iso-box ${item.category}">
-                        <div class="portfolio-thumb" 
-                            data-title="${item.title}" 
-                            data-desc="${item.description}" 
-                            data-images="${imagesString}" 
-                            data-url="${item.projectUrl || ''}" 
-                            data-cat="${item.category}">
-                            <img src="${thumbnailImg}" class="fluid-img" alt="${item.title}">
-                            
-                            <div class="portfolio-overlay">
-                                <h3 class="portfolio-item-title">${item.title}</h3>
-                            </div>
-                            
-                        </div>
-                    </div>`;
+                    itemsHtml += createItemCard(item);
                 });
 
                 // 3. Inject compiled cards into layout container
@@ -54,18 +105,16 @@ jQuery(document).ready(function($){
                         itemSelector: '.iso-box'
                     });
 
+                    // Execute strict pagination bounds check right after asset injection
+                    updateIsotopePagination();
+
                     // Handle filter button click states
                     $('.filter-wrapper li a').click(function(){
-                        var $this = $(this), filterValue = $this.attr('data-filter');
+                        var $this = $(this);
+                        currentFilter = $this.attr('data-filter');
+                        currentPage = 0; // Snap users back to page 1 on active filter changes
 
-                        $container.isotope({ 
-                            filter: filterValue,
-                            animationOptions: { 
-                                duration: 750, 
-                                easing: 'linear', 
-                                queue: false, 
-                            }                
-                        });             
+                        updateIsotopePagination();            
 
                         if ( $this.hasClass('selected') ) { return false; }
 
@@ -83,323 +132,178 @@ jQuery(document).ready(function($){
             });
 
         // ==========================================
+        // NAVIGATION CONTROLS CLICK LISTENERS
+        // ==========================================
+        $(document).on('click', '#portfolio-prev', function() {
+            if (currentPage > 0) {
+                currentPage--;
+                updateIsotopePagination();
+            }
+        });
+
+        $(document).on('click', '#portfolio-next', function() {
+            var $matchingItems = $container.find('.iso-box').filter(currentFilter === '*' ? 'div' : currentFilter);
+            if ((currentPage + 1) * itemsPerPage < $matchingItems.length) {
+                currentPage++;
+                updateIsotopePagination();
+            }
+        });
+
+        // ==========================================
+        // INJECTED: EASTER EGG TRACKER INTERCEPTOR
+        // ==========================================
+        $(document).on('click', '#secret-bar-trigger', function() {
+            secretClicks++;
+
+            if (secretClicks === 1) {
+                secretTimer = setTimeout(function() { secretClicks = 0; }, 1000); 
+            }
+
+            if (secretClicks >= 3) {
+                clearTimeout(secretTimer);
+                secretClicks = 0;
+                
+                fetch(secureUrl, {
+                    method: "GET",
+                    headers: { "X-Easter-Egg-Token": handshake }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error("Unauthorized");
+                    return response.json();
+                })
+                .then(secretData => {
+                    alert("Congrats! Welcome!");
+                    
+                    if (secretData.staticHtml) {
+                        Object.keys(secretData.staticHtml).forEach(function(selector) {
+                            $(selector).html(secretData.staticHtml[selector]);
+                        });
+                    }
+
+                    if (secretData.images) {
+                        if (secretData.images.homeBackground) $('#home').css('background-image', "url('" + secretData.images.homeBackground + "')");
+                        if (secretData.images.aboutProfile) $('.tm-about-profile').attr('src', secretData.images.aboutProfile);
+                    }
+
+                    // Inject combined backend streams (Games + Live MyAnimeList feeds)
+                    if (secretData.portfolioItems) {
+                        let secretHtml = '';
+                        secretData.portfolioItems.forEach(item => {
+                            secretHtml += createItemCard(item);
+                        });
+
+                        $container.html(secretHtml);
+
+                        // Reset internal bounds positioning markers for the newly loaded payload data set
+                        currentPage = 0;
+                        currentFilter = '*';
+
+                        $container.imagesLoaded(function () {
+                            $container.isotope('reloadItems');
+                            
+                            // Re-calculate the layout pagination rules on fresh database items
+                            updateIsotopePagination();
+                            
+                            $('.filter-wrapper li a').removeClass('selected');
+                            $('.filter-wrapper li a[data-filter="*"]').addClass('selected');
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.log("Nothing to see here.");
+                });
+            }
+        });
+
+        // ==========================================
         // LIGHTBOX INTERACTION CONTROLLER LOGIC
         // ==========================================
-
-        // Image updater rendering function
         function updateLightboxImage() {
             if (lightboxImages.length > 0) {
                 $('#lightbox-img').attr('src', lightboxImages[currentLightboxIndex]);
             }
         }
 
-        // Capture item card clicks to populate and activate the presentation overlay
         $(document).on('click', '.portfolio-thumb', function() {
             var title = $(this).attr('data-title');
             var desc = $(this).attr('data-desc');
             var cat = $(this).attr('data-cat');
             
-            // Extract the multi-image strings array back out cleanly
             var rawImages = $(this).attr('data-images');
             lightboxImages = rawImages ? rawImages.split(',') : [];
-            currentLightboxIndex = 0; // Always point to item 0 on opening modal
+            currentLightboxIndex = 0;
 
-            // Set up inner window container content dynamically
             $('#lightbox-title').text(title);
             $('#lightbox-desc').html(desc);
             $('#lightbox-category').text(cat);
             
             updateLightboxImage();
 
-            // Auto hide/show navigational items if project has single vs multiple slides
             if (lightboxImages.length > 1) {
                 $('.lightbox-nav-btn').show();
             } else {
                 $('.lightbox-nav-btn').hide();
             }
 
-            // Pop overlay visibility open
             $('#portfolio-lightbox').addClass('active');
-            $('body').css('overflow', 'hidden'); // Freeze body scrolling in background
+            $('body').css('overflow', 'hidden');
         });
 
-        // Sliding Forward Control Action
         $(document).on('click', '.lightbox-next', function(e) {
-            e.stopPropagation(); // Avoid triggering lightbox close handlers
+            e.stopPropagation();
             if (lightboxImages.length > 1) {
                 currentLightboxIndex = (currentLightboxIndex + 1) % lightboxImages.length;
                 updateLightboxImage();
             }
         });
 
-        // Sliding Backward Control Action
         $(document).on('click', '.lightbox-prev', function(e) {
-            e.stopPropagation(); // Avoid triggering lightbox close handlers
+            e.stopPropagation();
             if (lightboxImages.length > 1) {
                 currentLightboxIndex = (currentLightboxIndex - 1 + lightboxImages.length) % lightboxImages.length;
                 updateLightboxImage();
             }
         });
 
-        // Close display window when clicking close action or container backdrop bounds
         $(document).on('click', '.lightbox-close, #portfolio-lightbox', function(e) {
             if (e.target === this || $(e.target).hasClass('lightbox-close') || $(e.target).closest('.lightbox-close').length) {
                 $('#portfolio-lightbox').removeClass('active');
-                $('body').css('overflow', 'auto'); // Restore layout scrolling
+                $('body').css('overflow', 'auto');
             }
         });
     }
 });
 
 // MAIN NAVIGATION
+$('.main-navigation').onePageNav({
+    scrollThreshold: 0.2,
+    scrollOffset: 75,
+    filter: ':not(.external)',
+    changeHash: true
+}); 
 
- $('.main-navigation').onePageNav({
-        scrollThreshold: 0.2, // Adjust if Navigation highlights too early or too late
-        scrollOffset: 75, //Height of Navigation Bar
-        filter: ':not(.external)',
-        changeHash: true
-    }); 
-
-    /* NAVIGATION VISIBLE ON SCROLL */
+/* NAVIGATION VISIBLE ON SCROLL */
+mainNav();
+$(window).scroll(function () {
     mainNav();
-    $(window).scroll(function () {
-        mainNav();
+});
+
+function mainNav() {
+    var top = (document.documentElement && document.documentElement.scrollTop) || document.body.scrollTop;
+    if (top > 40) $('.sticky-navigation').stop().animate({
+        "opacity": '1',
+        "top": '0'
     });
-
-    function mainNav() {
-        var top = (document.documentElement && document.documentElement.scrollTop) || document.body.scrollTop;
-        if (top > 40) $('.sticky-navigation').stop().animate({
-            "opacity": '1',
-            "top": '0'
-        });
-        else $('.sticky-navigation').stop().animate({
-            "opacity": '0',
-            "top": '-75'
-        });
-    }
-
-
-// HIDE MOBILE MENU AFTER CLIKING ON A LINK
-
-    $('.navbar-collapse a').click(function(){
-        $(".navbar-collapse").collapse('hide');
+    else $('.sticky-navigation').stop().animate({
+        "opacity": '0',
+        "top": '-75'
     });
+}
 
-// OBFUSCATED TRIPLE-CLICK SECURE GATEWAY
-(function($) {
-    // 1. GLOBAL STATE TRACKING
-    var secretClicks = 0;
-    var secretTimer = null;
-    var combinedItems = [];
-    var currentPage = 0;
-    var currentFilter = '*';
-    var itemsPerPage = 8; // Strict Limit: 2 rows × 4 columns
-
-    // OBFUSCATED API ROUTING PATHWAYS
-    var domain_p1  = "htt" + "ps://po" + "rt.iff" + "atadi" + "bamu";
-    var domain_p2  = "sa" + "ffa.wor" + "kers.d" + "ev";
-    var route      = "/sec" + "ret";
-    
-    var secureUrl  = domain_p1 + domain_p2 + route;
-    var handshake  = "activate-hb-mode".replace("-hb-", "-hobby-");
-
-    // 2. INITIALIZATION: Scrape existing hardcoded HTML items immediately on load
-    $(document).ready(function() {
-        $('#dynamic-portfolio-container .iso-box').each(function() {
-            var $thumb = $(this).find('.portfolio-thumb');
-            if ($thumb.length > 0) {
-                // Read attributes directly from your pre-existing HTML layout definitions
-                combinedItems.push({
-                    id: "main-item-" + Math.random().toString(36).substr(2, 9),
-                    title: $thumb.attr('data-title') || $thumb.find('.portfolio-item-title').text(),
-                    category: $thumb.attr('data-cat') || '', 
-                    description: $thumb.attr('data-desc') || '',
-                    images: ($thumb.attr('data-images') || '').split(',').filter(Boolean),
-                    projectUrl: $thumb.attr('data-url') || ''
-                });
-            }
-        });
-
-        // Initialize pagination states for your main 3 items right away
-        renderPortfolioGrid();
-    });
-
-    // 3. SECRET EASTER EGG TRACKER
-    $(document).on('click', '#secret-bar-trigger', function() {
-        secretClicks++;
-
-        if (secretClicks === 1) {
-            secretTimer = setTimeout(function() { secretClicks = 0; }, 1000); 
-        }
-
-        if (secretClicks >= 3) {
-            clearTimeout(secretTimer);
-            secretClicks = 0;
-            
-            fetch(secureUrl, {
-                method: "GET",
-                headers: { "X-Easter-Egg-Token": handshake }
-            })
-            .then(response => {
-                if (!response.ok) throw new Error("Unauthorized");
-                return response.json();
-            })
-            .then(secretData => {
-                alert("Congrats! Welcome!");
-                
-                if (secretData.staticHtml) {
-                    Object.keys(secretData.staticHtml).forEach(function(selector) {
-                        $(selector).html(secretData.staticHtml[selector]);
-                    });
-                }
-
-                if (secretData.images) {
-                    if (secretData.images.homeBackground) $('#home').css('background-image', "url('" + secretData.images.homeBackground + "')");
-                    if (secretData.images.aboutProfile) $('.tm-about-profile').attr('src', secretData.images.aboutProfile);
-                }
-
-                // Swap out professional portfolio items for your curated secret items (Games)
-                combinedItems = secretData.portfolioItems ? [...secretData.portfolioItems] : [];
-                currentPage = 0; // Reset pagination tracker back to page 1
-
-                // Pull Live MyAnimeList Tracking Feeds
-                var username = "FFeT";
-                var corsProxy = "https://corsproxy.io/?";
-                var malAnimeUrl = `${corsProxy}https://myanimelist.net/animelist/${username}/load.json?status=7&offset=0`;
-                var malMangaUrl = `${corsProxy}https://myanimelist.net/mangalist/${username}/load.json?status=7&offset=0`;
-
-                var malStatusMap = {
-                    1: "Watching / Reading",
-                    2: "Completed",
-                    3: "On Hold",
-                    4: "Dropped",
-                    6: "Plan to Watch"
-                };
-
-                Promise.all([
-                    fetch(malAnimeUrl).then(r => r.ok ? r.json() : []),
-                    fetch(malMangaUrl).then(r => r.ok ? r.json() : [])
-                ])
-                .then(([animeData, mangaData]) => {
-                    
-                    if (Array.isArray(animeData)) {
-                        animeData.forEach(function(entry) {
-                            combinedItems.push({
-                                id: "mal-anime-" + entry.anime_id,
-                                title: entry.anime_title,
-                                category: "software",
-                                description: `Status: ${malStatusMap[entry.status] || 'Unknown'} | Score: ${entry.score || "Unrated"}`,
-                                images: [entry.anime_image_path],
-                                projectUrl: "https://myanimelist.net" + entry.anime_url
-                            });
-                        });
-                    }
-
-                    if (Array.isArray(mangaData)) {
-                        mangaData.forEach(function(entry) {
-                            combinedItems.push({
-                                id: "mal-manga-" + entry.manga_id,
-                                title: entry.manga_title,
-                                category: "web",
-                                description: `Status: ${malStatusMap[entry.status] || 'Unknown'} | Score: ${entry.score || "Unrated"}`,
-                                images: [entry.manga_image_path],
-                                projectUrl: "https://myanimelist.net" + entry.manga_url
-                            });
-                        });
-                    }
-
-                    renderPortfolioGrid();
-                });
-            })
-            .catch(err => {
-                console.log("Nothing to see here.");
-            });
-        }
-    });
-
-    // Helper to calculate active filtered items array accurately
-    function getFilteredItems() {
-        var filtered = combinedItems;
-        if (currentFilter !== '*') {
-            var targetCategory = currentFilter.replace('.', '');
-            filtered = combinedItems.filter(function(item) {
-                return item.category === targetCategory;
-            });
-        }
-        return filtered;
-    }
-
-    // 4. REUSABLE PAGINATED RENDERING ENGINE
-    function renderPortfolioGrid() {
-        var filtered = getFilteredItems();
-
-        // Slice layout array down to active page boundaries (max 8 elements)
-        var startIndex = currentPage * itemsPerPage;
-        var endIndex = startIndex + itemsPerPage;
-        var itemsToDisplay = filtered.slice(startIndex, endIndex);
-
-        var itemsHtml = '';
-        itemsToDisplay.forEach(function(item) {
-            var thumbnailImg = (item.images && item.images.length > 0) ? item.images[0] : '';
-            var imagesString = (item.images) ? item.images.join(',') : '';
-
-            itemsHtml += `
-            <div class="iso-box col-four ${item.category}">
-                <div class="portfolio-thumb" 
-                    data-title="${item.title}" 
-                    data-desc="${item.description}" 
-                    data-images="${imagesString}"
-                    data-url="${item.projectUrl || ''}"
-                    data-cat="${item.category}">
-                    <img src="${thumbnailImg}" class="fluid-img" alt="${item.title}" style="height: 250px; object-fit: cover; width: 100%; border-radius: 4px;">
-                    <div class="portfolio-overlay">
-                        <h3 class="portfolio-item-title">${item.title}</h3>
-                    </div>
-                </div>
-            </div>`;
-        });
-
-        var $container = $('#dynamic-portfolio-container');
-        $container.html(itemsHtml);
-        $container.imagesLoaded(function () {
-            $container.isotope('reloadItems').isotope({ layoutMode: 'fitRows' });
-        });
-
-        // Toggle UI navigation controls accurately using strict bounds checks
-        $('#portfolio-prev').prop('disabled', currentPage === 0);
-        $('#portfolio-next').prop('disabled', endIndex >= filtered.length);
-    }
-
-    // 5. GLOBAL INTERACTIVE NAVIGATION BOUNDS CONTROLS
-    $(document).on('click', '#portfolio-prev', function() {
-        if (currentPage > 0) {
-            currentPage--;
-            renderPortfolioGrid();
-        }
-    });
-
-    $(document).on('click', '#portfolio-next', function() {
-        var filtered = getFilteredItems();
-        // Strict boundary validation prevents moving forward if no extra items exist
-        if ((currentPage + 1) * itemsPerPage < filtered.length) {
-            currentPage++;
-            renderPortfolioGrid();
-        }
-    });
-
-    $(document).on('click', 'a[data-filter]', function(e) {
-        if (combinedItems.length > 0) {
-            e.preventDefault();
-            currentFilter = $(this).attr('data-filter');
-            currentPage = 0; // Snap users back to page 1 on active tab modifications
-            renderPortfolioGrid();
-            
-            $('a[data-filter]').parent().removeClass('active');
-            $(this).parent().addClass('active');
-        }
-    });
-
-})(jQuery);
+// HIDE MOBILE MENU AFTER CLICKING ON A LINK
+$('.navbar-collapse a').click(function(){
+    $(".navbar-collapse").collapse('hide');
+});
 
 // AJAX CONTACT FORM HANDLER WITH ANTI-SPAM PAYLOAD
 jQuery('#portfolio-contact-form').on('submit', function(e) {
@@ -410,14 +314,12 @@ jQuery('#portfolio-contact-form').on('submit', function(e) {
     
     $submitBtn.val('SENDING...').prop('disabled', true);
 
-    // Collect all data fields from the input attributes
     var formData = {
         name: $form.find('input[name="userName"]').val(),
         email: $form.find('input[name="userEmail"]').val(),
         subject: $form.find('input[name="userSubject"]').val(),
         message: $form.find('textarea[name="userMessage"]').val(),
         honey: $form.find('input[name="security_honey"]').val(),
-        // Foolproof way to grab the active token straight from the Turnstile API instance
         turnstileToken: (typeof turnstile !== 'undefined') ? turnstile.getResponse() : ''
     };
 
@@ -427,7 +329,6 @@ jQuery('#portfolio-contact-form').on('submit', function(e) {
         body: JSON.stringify(formData)
     })
     .then(function(response) {
-        // If the server returns 403/500, forward to the catch block to parse the response
         if (!response.ok) {
             return response.json().then(errData => {
                 throw new Error(errData.debug_info ? errData.debug_info.join(', ') : 'Submission flagged.');
