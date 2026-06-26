@@ -12,6 +12,9 @@ jQuery(document).ready(function($){
     var currentPage = 0;
     var itemsPerPage = 8; // Strict Limit: 2 rows × 4 columns
     var currentFilter = '*';
+    
+    // Global tracking flag to dynamically transform item categories in presentation
+    var isSecretMode = false;
 
     // --- SECRET EASTER EGG TRACKING ROUTINES ---
     var secretClicks = 0;
@@ -107,29 +110,31 @@ jQuery(document).ready(function($){
 
                     // Execute strict pagination bounds check right after asset injection
                     updateIsotopePagination();
-
-                    // Handle filter button click states
-                    $('.filter-wrapper li a').click(function(){
-                        var $this = $(this);
-                        currentFilter = $this.attr('data-filter');
-                        currentPage = 0; // Snap users back to page 1 on active filter changes
-
-                        updateIsotopePagination();            
-
-                        if ( $this.hasClass('selected') ) { return false; }
-
-                        var filter_wrapper = $this.closest('.filter-wrapper');
-                        filter_wrapper.find('.selected').removeClass('selected');
-                        $this.addClass('selected');
-
-                        return false;
-                    }); 
                 });
             })
             .catch(error => {
                 console.error("Failed loading portfolio layout:", error);
                 $container.html("<div class='col-md-12 text-center'><p>Unable to load portfolio assets cleanly.</p></div>");
             });
+
+        // ==========================================
+        // DELEGATED FILTER BUTTON CLICK LISTENERS
+        // ==========================================
+        $(document).on('click', '.filter-wrapper li a', function(){
+            var $this = $(this);
+            currentFilter = $this.attr('data-filter');
+            currentPage = 0; // Snap users back to page 1 on active filter changes
+
+            updateIsotopePagination();            
+
+            if ( $this.hasClass('selected') ) { return false; }
+
+            var filter_wrapper = $this.closest('.filter-wrapper');
+            filter_wrapper.find('.selected').removeClass('selected');
+            $this.addClass('selected');
+
+            return false;
+        }); 
 
         // ==========================================
         // NAVIGATION CONTROLS CLICK LISTENERS
@@ -185,6 +190,20 @@ jQuery(document).ready(function($){
                         if (secretData.images.aboutProfile) $('.tm-about-profile').attr('src', secretData.images.aboutProfile);
                     }
 
+                    // Flip tracking state variable to enable label transformations
+                    isSecretMode = true;
+
+                    // Dynamically rewrite the visible UI tab labels
+                    $('.filter-wrapper li a[data-filter=".hardware"]').text('Games');
+                    $('.filter-wrapper li a[data-filter=".software"]').text('Anime');
+                    $('.filter-wrapper li a[data-filter=".web"]').text('Manga');
+                    $('#music-filter-tab').show();
+
+                    // Safe injection checking for the Music menu element
+                    if ($('.filter-wrapper li a[data-filter=".music"]').length === 0) {
+                        $('.filter-wrapper .portfolio-filter').append('<li><a href="#" data-filter=".music">Music</a></li>');
+                    }
+
                     // Inject combined backend streams (Games + Live MyAnimeList feeds)
                     if (secretData.portfolioItems) {
                         let secretHtml = '';
@@ -233,9 +252,22 @@ jQuery(document).ready(function($){
             lightboxImages = rawImages ? rawImages.split(',') : [];
             currentLightboxIndex = 0;
 
+            // Translate data IDs into reader-friendly categories based on view profile layout
+            var translatedCategory = cat;
+            if (isSecretMode) {
+                if (cat === 'hardware') translatedCategory = 'Game';
+                else if (cat === 'software') translatedCategory = 'Anime';
+                else if (cat === 'web') translatedCategory = 'Manga';
+                else if (cat === 'music') translatedCategory = 'Music';
+            } else {
+                if (cat === 'hardware') translatedCategory = 'Hardware';
+                else if (cat === 'software') translatedCategory = 'Software';
+                else if (cat === 'web') translatedCategory = 'Web';
+            }
+
             $('#lightbox-title').text(title);
             $('#lightbox-desc').html(desc);
-            $('#lightbox-category').text(cat);
+            $('#lightbox-category').text(translatedCategory);
             
             updateLightboxImage();
 
